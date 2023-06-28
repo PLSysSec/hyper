@@ -556,6 +556,9 @@ mod tests {
             value: *const u8,
             value_len: usize,
         ) -> c_int {
+            lffi_check_valid_mem(vec);
+            lffi_check_valid_mem!(name, name_len);
+            lffi_check_valid_mem!(value, value_len);
             unsafe {
                 let vec = &mut *(vec as *mut Vec<u8>);
                 let name = std::slice::from_raw_parts(name, name_len);
@@ -620,6 +623,9 @@ mod tests {
             value: *const u8,
             value_len: usize,
         ) -> c_int {
+            lffi_check_valid_mem(vec);
+            lffi_check_valid_mem!(name, name_len);
+            lffi_check_valid_mem!(value, value_len);
             unsafe {
                 let vec = &mut *(vec as *mut Vec<u8>);
                 let name = std::slice::from_raw_parts(name, name_len);
