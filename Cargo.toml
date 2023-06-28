@@ -19,6 +19,9 @@ include = [
   "src/**/*",
 ]
 
+[lib]
+crate-type = ["cdylib", "rlib"]
+
 [dependencies]
 bytes = "1"
 futures-channel = "0.3"
