@@ -23,6 +23,8 @@ include = [
 crate-type = ["cdylib", "rlib"]
 
 [dependencies]
+liquid_ffi = { path = "../../.." }
+
 bytes = "1"
 futures-channel = "0.3"
 futures-util = { version = "0.3", default-features = false }

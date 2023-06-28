@@ -52,6 +52,13 @@
 //!
 //! [feature flags]: https://doc.rust-lang.org/cargo/reference/manifest.html#the-features-section
 
+// use our instrumented allocator
+extern crate liquid_ffi;
+use liquid_ffi::lffi_tracing_allocator::LffiAllocator;
+use std::alloc::System;
+#[global_allocator]
+static ALLOCATOR: LffiAllocator<System> = LffiAllocator::system();
+
 #[doc(hidden)]
 pub use http;
 
