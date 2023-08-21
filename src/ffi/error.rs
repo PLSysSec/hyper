@@ -1,4 +1,5 @@
 use libc::size_t;
+use crate::ffi::safe_ffi::*;
 
 /// A more detailed error object returned by some hyper functions.
 pub struct hyper_error(crate::Error);

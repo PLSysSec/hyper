@@ -13,6 +13,7 @@ use libc::c_int;
 
 use super::error::hyper_code;
 use super::UserDataPointer;
+use crate::ffi::safe_ffi::*;
 
 type BoxFuture<T> = Pin<Box<dyn Future<Output = T> + Send>>;
 type BoxAny = Box<dyn AsTaskType + Send + Sync>;

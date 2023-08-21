@@ -5,6 +5,7 @@ use libc::c_int;
 
 use crate::client::conn;
 use crate::rt::Executor as _;
+use crate::ffi::safe_ffi::*;
 
 use super::error::hyper_code;
 use super::http_types::{hyper_request, hyper_response};

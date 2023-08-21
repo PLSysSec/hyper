@@ -10,6 +10,7 @@ use crate::body::Incoming as IncomingBody;
 use crate::ext::{HeaderCaseMap, OriginalHeaderOrder, ReasonPhrase};
 use crate::header::{HeaderName, HeaderValue};
 use crate::{HeaderMap, Method, Request, Response, Uri};
+use crate::ffi::safe_ffi::*;
 
 /// An HTTP request.
 pub struct hyper_request(pub(super) Request<IncomingBody>);

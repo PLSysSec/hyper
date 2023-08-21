@@ -4,6 +4,7 @@ use std::task::{Context, Poll};
 
 use libc::size_t;
 use tokio::io::{AsyncRead, AsyncWrite};
+use crate::ffi::safe_ffi::*;
 
 use super::task::hyper_context;
 
