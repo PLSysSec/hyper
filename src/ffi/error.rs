@@ -59,14 +59,14 @@ impl hyper_error {
 ffi_fn! {
     /// Frees a `hyper_error`.
     fn hyper_error_free(err: *mut hyper_error) {
-        drop(non_null!(Box::from_raw(err) ?= ()));
+        drop(non_null!(safe_box_from_raw(err) ?= ()));
     }
 }
 
 ffi_fn! {
     /// Get an equivalent `hyper_code` from this error.
     fn hyper_error_code(err: *const hyper_error) -> hyper_code {
-        non_null!(&*err ?= hyper_code::HYPERE_INVALID_ARG).code()
+        non_null!(safe_as_ref(err) ?= hyper_code::HYPERE_INVALID_ARG).code()
     }
 }
 
@@ -78,9 +78,9 @@ ffi_fn! {
     ///
     /// The return value is number of bytes that were written to `dst`.
     fn hyper_error_print(err: *const hyper_error, dst: *mut u8, dst_len: size_t) -> size_t {
-        let dst = unsafe {
-            std::slice::from_raw_parts_mut(dst, dst_len)
+        let dst = {
+            safe_slice_from_raw_parts_mut(dst, dst_len)
         };
-        non_null!(&*err ?= 0).print_to(dst)
+        non_null!(safe_as_ref(err) ?= 0).print_to(dst)
     }
 }

@@ -49,8 +49,8 @@ ffi_fn! {
     /// The returned `hyper_task *` must be polled with an executor until the
     /// handshake completes, at which point the value can be taken.
     fn hyper_clientconn_handshake(io: *mut hyper_io, options: *mut hyper_clientconn_options) -> *mut hyper_task {
-        let options = non_null! { Box::from_raw(options) ?= ptr::null_mut() };
-        let io = non_null! { Box::from_raw(io) ?= ptr::null_mut() };
+        let options = non_null! { safe_box_from_raw(options) ?= ptr::null_mut() };
+        let io = non_null! { safe_box_from_raw(io) ?= ptr::null_mut() };
 
         Box::into_raw(hyper_task::boxed(async move {
             #[cfg(feature = "http2")]
@@ -90,12 +90,12 @@ ffi_fn! {
     /// Returns a task that needs to be polled until it is ready. When ready, the
     /// task yields a `hyper_response *`.
     fn hyper_clientconn_send(conn: *mut hyper_clientconn, req: *mut hyper_request) -> *mut hyper_task {
-        let mut req = non_null! { Box::from_raw(req) ?= ptr::null_mut() };
+        let mut req = non_null! { safe_box_from_raw(req) ?= ptr::null_mut() };
 
         // Update request with original-case map of headers
         req.finalize_request();
 
-        let fut = match non_null! { &mut *conn ?= ptr::null_mut() }.tx {
+        let fut = match non_null! { safe_as_ref_mut(conn) ?= ptr::null_mut() }.tx {
             Tx::Http1(ref mut tx) => futures_util::future::Either::Left(tx.send_request(req.0)),
             Tx::Http2(ref mut tx) => futures_util::future::Either::Right(tx.send_request(req.0)),
         };
@@ -111,11 +111,11 @@ ffi_fn! {
 ffi_fn! {
     /// Free a `hyper_clientconn *`.
     fn hyper_clientconn_free(conn: *mut hyper_clientconn) {
-        drop(non_null! { Box::from_raw(conn) ?= () });
+        drop(non_null! { safe_box_from_raw(conn) ?= () });
     }
 }
 
-unsafe impl AsTaskType for hyper_clientconn {
+impl AsTaskType for hyper_clientconn {
     fn as_task_type(&self) -> hyper_task_return_type {
         hyper_task_return_type::HYPER_TASK_CLIENTCONN
     }
@@ -141,7 +141,7 @@ ffi_fn! {
     ///
     /// Pass `0` to allow lowercase normalization (default), `1` to retain original case.
     fn hyper_clientconn_options_set_preserve_header_case(opts: *mut hyper_clientconn_options, enabled: c_int) {
-        let opts = non_null! { &mut *opts ?= () };
+        let opts = non_null! { safe_as_ref_mut(opts) ?= () };
         opts.http1_preserve_header_case = enabled != 0;
     }
 }
@@ -151,7 +151,7 @@ ffi_fn! {
     ///
     /// Pass `0` to allow reordering (default), `1` to retain original ordering.
     fn hyper_clientconn_options_set_preserve_header_order(opts: *mut hyper_clientconn_options, enabled: c_int) {
-        let opts = non_null! { &mut *opts ?= () };
+        let opts = non_null! { safe_as_ref_mut(opts) ?= () };
         opts.http1_preserve_header_order = enabled != 0;
     }
 }
@@ -159,7 +159,7 @@ ffi_fn! {
 ffi_fn! {
     /// Free a `hyper_clientconn_options *`.
     fn hyper_clientconn_options_free(opts: *mut hyper_clientconn_options) {
-        drop(non_null! { Box::from_raw(opts) ?= () });
+        drop(non_null! { safe_box_from_raw(opts) ?= () });
     }
 }
 
@@ -168,9 +168,9 @@ ffi_fn! {
     ///
     /// This does not consume the `options` or the `exec`.
     fn hyper_clientconn_options_exec(opts: *mut hyper_clientconn_options, exec: *const hyper_executor) {
-        let opts = non_null! { &mut *opts ?= () };
+        let opts = non_null! { safe_as_ref_mut(opts) ?= () };
 
-        let exec = non_null! { Arc::from_raw(exec) ?= () };
+        let exec = non_null! { safe_arc_from_raw(exec) ?= () };
         let weak_exec = hyper_executor::downgrade(&exec);
         std::mem::forget(exec);
 
@@ -185,7 +185,7 @@ ffi_fn! {
     fn hyper_clientconn_options_http2(opts: *mut hyper_clientconn_options, enabled: c_int) -> hyper_code {
         #[cfg(feature = "http2")]
         {
-            let opts = non_null! { &mut *opts ?= hyper_code::HYPERE_INVALID_ARG };
+            let opts = non_null! { safe_as_ref_mut(opts) ?= hyper_code::HYPERE_INVALID_ARG };
             opts.http2 = enabled != 0;
             hyper_code::HYPERE_OK
         }
@@ -206,7 +206,7 @@ ffi_fn! {
     /// Pass `0` to disable, `1` to enable.
     ///
     fn hyper_clientconn_options_http1_allow_multiline_headers(opts: *mut hyper_clientconn_options, enabled: c_int) -> hyper_code {
-        let opts = non_null! { &mut *opts ?= hyper_code::HYPERE_INVALID_ARG };
+        let opts = non_null! { safe_as_ref_mut(opts) ?= hyper_code::HYPERE_INVALID_ARG };
         opts.http1_allow_obsolete_multiline_headers_in_responses = enabled != 0;
         hyper_code::HYPERE_OK
     }

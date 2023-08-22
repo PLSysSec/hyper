@@ -36,18 +36,18 @@ macro_rules! non_null {
         if $ptr.is_null() {
             return $err;
         }
-        unsafe { $eval }
+        { $eval }
     }};
-    (&*$ptr:ident ?= $err:expr) => {{
-        non_null!($ptr, &*$ptr, $err)
+    (safe_as_ref($ptr:ident) ?= $err:expr) => {{
+        non_null!($ptr, crate::ffi::safe_ffi::safe_as_ref($ptr), $err)
     }};
-    (&mut *$ptr:ident ?= $err:expr) => {{
-        non_null!($ptr, &mut *$ptr, $err)
+    (safe_as_ref_mut($ptr:ident) ?= $err:expr) => {{
+        non_null!($ptr, crate::ffi::safe_ffi::safe_as_ref_mut($ptr), $err)
     }};
-    (Box::from_raw($ptr:ident) ?= $err:expr) => {{
-        non_null!($ptr, Box::from_raw($ptr), $err)
+    (safe_box_from_raw($ptr:ident) ?= $err:expr) => {{
+        non_null!($ptr, crate::ffi::safe_ffi::safe_box_from_raw($ptr), $err)
     }};
-    (Arc::from_raw($ptr:ident) ?= $err:expr) => {{
-        non_null!($ptr, Arc::from_raw($ptr), $err)
+    (safe_arc_from_raw($ptr:ident) ?= $err:expr) => {{
+        non_null!($ptr, crate::ffi::safe_ffi::safe_arc_from_raw($ptr), $err)
     }};
 }

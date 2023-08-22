@@ -89,7 +89,7 @@ pub enum hyper_task_return_type {
     HYPER_TASK_BUF,
 }
 
-pub(crate) unsafe trait AsTaskType {
+pub(crate) trait AsTaskType {
     fn as_task_type(&self) -> hyper_task_return_type;
 }
 
@@ -196,7 +196,7 @@ ffi_fn! {
 ffi_fn! {
     /// Frees an executor and any incomplete tasks still part of it.
     fn hyper_executor_free(exec: *const hyper_executor) {
-        drop(non_null!(Arc::from_raw(exec) ?= ()));
+        drop(non_null!(safe_arc_from_raw(exec) ?= ()));
     }
 }
 
@@ -206,8 +206,8 @@ ffi_fn! {
     /// The executor takes ownership of the task, it should not be accessed
     /// again unless returned back to the user with `hyper_executor_poll`.
     fn hyper_executor_push(exec: *const hyper_executor, task: *mut hyper_task) -> hyper_code {
-        let exec = non_null!(&*exec ?= hyper_code::HYPERE_INVALID_ARG);
-        let task = non_null!(Box::from_raw(task) ?= hyper_code::HYPERE_INVALID_ARG);
+        let exec = non_null!(safe_as_ref(exec) ?= hyper_code::HYPERE_INVALID_ARG);
+        let task = non_null!(safe_box_from_raw(task) ?= hyper_code::HYPERE_INVALID_ARG);
         exec.spawn(task);
         hyper_code::HYPERE_OK
     }
@@ -221,7 +221,7 @@ ffi_fn! {
     ///
     /// If there are no ready tasks, this returns `NULL`.
     fn hyper_executor_poll(exec: *const hyper_executor) -> *mut hyper_task {
-        let exec = non_null!(&*exec ?= ptr::null_mut());
+        let exec = non_null!(safe_as_ref(exec) ?= ptr::null_mut());
         match exec.poll_next() {
             Some(task) => Box::into_raw(task),
             None => ptr::null_mut(),
@@ -270,7 +270,7 @@ impl Future for TaskFuture {
 ffi_fn! {
     /// Free a task.
     fn hyper_task_free(task: *mut hyper_task) {
-        drop(non_null!(Box::from_raw(task) ?= ()));
+        drop(non_null!(safe_box_from_raw(task) ?= ()));
     }
 }
 
@@ -282,7 +282,7 @@ ffi_fn! {
     ///
     /// Use `hyper_task_type` to determine the type of the `void *` return value.
     fn hyper_task_value(task: *mut hyper_task) -> *mut c_void {
-        let task = non_null!(&mut *task ?= ptr::null_mut());
+        let task = non_null!(safe_as_ref_mut(task) ?= ptr::null_mut());
 
         if let Some(val) = task.output.take() {
             let p = Box::into_raw(val) as *mut c_void;
@@ -303,7 +303,7 @@ ffi_fn! {
     fn hyper_task_type(task: *mut hyper_task) -> hyper_task_return_type {
         // instead of blowing up spectacularly, just say this null task
         // doesn't have a value to retrieve.
-        non_null!(&*task ?= hyper_task_return_type::HYPER_TASK_EMPTY).output_type()
+        non_null!(safe_as_ref(task) ?= hyper_task_return_type::HYPER_TASK_EMPTY).output_type()
     }
 }
 
@@ -317,32 +317,32 @@ ffi_fn! {
             return;
         }
 
-        unsafe { (*task).userdata = UserDataPointer(userdata) };
+        safe_as_ref_mut(task).userdata = UserDataPointer(userdata);
     }
 }
 
 ffi_fn! {
     /// Retrieve the userdata that has been set via `hyper_task_set_userdata`.
     fn hyper_task_userdata(task: *mut hyper_task) -> *mut c_void {
-        non_null!(&*task ?= ptr::null_mut()).userdata.0
+        non_null!(safe_as_ref(task) ?= ptr::null_mut()).userdata.0
     } ?= ptr::null_mut()
 }
 
 // ===== impl AsTaskType =====
 
-unsafe impl AsTaskType for () {
+impl AsTaskType for () {
     fn as_task_type(&self) -> hyper_task_return_type {
         hyper_task_return_type::HYPER_TASK_EMPTY
     }
 }
 
-unsafe impl AsTaskType for crate::Error {
+impl AsTaskType for crate::Error {
     fn as_task_type(&self) -> hyper_task_return_type {
         hyper_task_return_type::HYPER_TASK_ERROR
     }
 }
 
-impl<T> IntoDynTaskType for T
+impl<T> IntoDynTaskType for T                
 where
     T: AsTaskType + Send + Sync + 'static,
 {
@@ -352,7 +352,7 @@ where
 }
 
 impl<T> IntoDynTaskType for crate::Result<T>
-where
+where                
     T: IntoDynTaskType + Send + Sync + 'static,
 {
     fn into_dyn_task_type(self) -> BoxAny {
@@ -387,7 +387,7 @@ impl hyper_context<'_> {
 ffi_fn! {
     /// Copies a waker out of the task context.
     fn hyper_context_waker(cx: *mut hyper_context<'_>) -> *mut hyper_waker {
-        let waker = non_null!(&mut *cx ?= ptr::null_mut()).0.waker().clone();
+        let waker = non_null!(safe_as_ref_mut(cx) ?= ptr::null_mut()).0.waker().clone();
         Box::into_raw(Box::new(hyper_waker { waker }))
     } ?= ptr::null_mut()
 }
@@ -397,7 +397,7 @@ ffi_fn! {
 ffi_fn! {
     /// Free a waker that hasn't been woken.
     fn hyper_waker_free(waker: *mut hyper_waker) {
-        drop(non_null!(Box::from_raw(waker) ?= ()));
+        drop(non_null!(safe_box_from_raw(waker) ?= ()));
     }
 }
 
@@ -406,7 +406,7 @@ ffi_fn! {
     ///
     /// NOTE: This consumes the waker. You should not use or free the waker afterwards.
     fn hyper_waker_wake(waker: *mut hyper_waker) {
-        let waker = non_null!(Box::from_raw(waker) ?= ());
+        let waker = non_null!(safe_box_from_raw(waker) ?= ());
         waker.waker.wake();
     }
 }

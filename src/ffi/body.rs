@@ -41,7 +41,7 @@ ffi_fn! {
 ffi_fn! {
     /// Free a `hyper_body *`.
     fn hyper_body_free(body: *mut hyper_body) {
-        drop(non_null!(Box::from_raw(body) ?= ()));
+        drop(non_null!(safe_box_from_raw(body) ?= ()));
     }
 }
 
@@ -58,7 +58,7 @@ ffi_fn! {
     /// However, it MUST NOT be used or freed until the related task completes.
     fn hyper_body_data(body: *mut hyper_body) -> *mut hyper_task {
         // This doesn't take ownership of the Body, so don't allow destructor
-        let mut body = ManuallyDrop::new(non_null!(Box::from_raw(body) ?= ptr::null_mut()));
+        let mut body = ManuallyDrop::new(non_null!(safe_box_from_raw(body) ?= ptr::null_mut()));
 
         Box::into_raw(hyper_task::boxed(async move {
             loop {
@@ -90,7 +90,7 @@ ffi_fn! {
     ///
     /// This will consume the `hyper_body *`, you shouldn't use it anymore or free it.
     fn hyper_body_foreach(body: *mut hyper_body, func: hyper_body_foreach_callback, userdata: *mut c_void) -> *mut hyper_task {
-        let mut body = non_null!(Box::from_raw(body) ?= ptr::null_mut());
+        let mut body = non_null!(safe_box_from_raw(body) ?= ptr::null_mut());
         let userdata = UserDataPointer(userdata);
 
         Box::into_raw(hyper_task::boxed(async move {
@@ -110,7 +110,7 @@ ffi_fn! {
 ffi_fn! {
     /// Set userdata on this body, which will be passed to callback functions.
     fn hyper_body_set_userdata(body: *mut hyper_body, userdata: *mut c_void) {
-        let b = non_null!(&mut *body ?= ());
+        let b = non_null!(safe_as_ref_mut(body) ?= ());
         b.0.as_ffi_mut().userdata = userdata;
     }
 }
@@ -136,7 +136,7 @@ ffi_fn! {
     /// If some error has occurred, you can return `HYPER_POLL_ERROR` to abort
     /// the body.
     fn hyper_body_set_data_func(body: *mut hyper_body, func: hyper_body_data_callback) {
-        let b = non_null!{ &mut *body ?= () };
+        let b = non_null!{ safe_as_ref_mut(body) ?= () };
         b.0.as_ffi_mut().data_func = func;
     }
 }
@@ -161,7 +161,7 @@ impl UserBody {
                 if out.is_null() {
                     Poll::Ready(None)
                 } else {
-                    let buf = unsafe { Box::from_raw(out) };
+                    let buf = safe_box_from_raw(out);
                     Poll::Ready(Some(Ok(Frame::data(buf.0))))
                 }
             }
@@ -199,8 +199,8 @@ ffi_fn! {
     ///
     /// This returns `NULL` if allocating a new buffer fails.
     fn hyper_buf_copy(buf: *const u8, len: size_t) -> *mut hyper_buf {
-        let slice = unsafe {
-            std::slice::from_raw_parts(buf, len)
+        let slice = {
+            safe_slice_from_raw_parts(buf, len)
         };
         Box::into_raw(Box::new(hyper_buf(Bytes::copy_from_slice(slice))))
     } ?= ptr::null_mut()
@@ -215,25 +215,25 @@ ffi_fn! {
     /// This pointer is borrowed data, and not valid once the `hyper_buf` is
     /// consumed/freed.
     fn hyper_buf_bytes(buf: *const hyper_buf) -> *const u8 {
-        unsafe { (*buf).0.as_ptr() }
+          (safe_as_ref(buf)).0.as_ptr() 
     } ?= ptr::null()
 }
 
 ffi_fn! {
     /// Get the length of the bytes this buffer contains.
     fn hyper_buf_len(buf: *const hyper_buf) -> size_t {
-        unsafe { (*buf).0.len() }
+          (safe_as_ref(buf)).0.len() 
     }
 }
 
 ffi_fn! {
     /// Free this buffer.
     fn hyper_buf_free(buf: *mut hyper_buf) {
-        drop(unsafe { Box::from_raw(buf) });
+        drop(safe_box_from_raw(buf));
     }
 }
 
-unsafe impl AsTaskType for hyper_buf {
+impl AsTaskType for hyper_buf {
     fn as_task_type(&self) -> hyper_task_return_type {
         hyper_task_return_type::HYPER_TASK_BUF
     }

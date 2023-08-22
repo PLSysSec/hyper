@@ -121,3 +121,12 @@ pub fn safe_cstr_from_ptr<'a>(ptr: *const i8) -> &'a std::ffi::CStr
         std::ffi::CStr::from_ptr(ptr)
     }
 }
+
+// reference: https://doc.rust-lang.org/std/sync/struct.Arc.html#method.from_raw
+// TODO: preconditions / postconditions?
+pub fn safe_arc_from_raw<T>(ptr: *const T) -> std::sync::Arc<T>
+{
+    unsafe {
+        std::sync::Arc::from_raw(ptr)
+    }
+}
